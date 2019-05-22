@@ -6,6 +6,24 @@
 ##########
 
 ##########
+#region Preparation
+##########
+
+# Make A Backup Of The Registery...
+Function BackupRegistry {
+	Write-Host "Performing a registry backup..."
+	$date = (Get-Date).ToString('dd_MM_yyyy_HH_mm_ss')
+	New-Item -ItemType Directory -Path $env:SYSTEMDRIVE\RegistryBackup\$date | Out-Null
+	$RegistryTrees = ("HKLM", "HKCU", "HKCR", "HKU", "HKCC")
+	Foreach ($Item in $RegistryTrees) {
+		reg export $Item $env:SYSTEMDRIVE\RegistryBackup\$date\$Item.reg | Out-Null
+	}
+}
+
+##########
+#endregion Preparation
+
+##########
 #region Privacy Tweaks
 ##########
 
@@ -1235,6 +1253,30 @@ Function DisableAutoRebootOnCrash {
 Function EnableAutoRebootOnCrash {
 	Write-Output "Enabling automatic reboot on crash (BSOD)..."
 	Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\CrashControl" -Name "AutoReboot" -Type DWord -Value 1
+}
+
+# Disable Unneeded Scheduled Tasks
+Function DisableUnnededScheduledTasks {
+	Write-Host "Disabling Unneeded Scheduled Tasks..."
+	#schtasks /Change /TN "Microsoft\Windows\CloudExperienceHost\CreateObjectTask" /Disable | Out-Null
+	schtasks /Change /TN "Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector" /Disable | Out-Null
+	schtasks /Change /TN "Microsoft\Windows\DiskFootprint\Diagnostics" /Disable | Out-Null
+	#schtasks /Change /TN "Microsoft\Windows\Feedback\Siuf\DmClient" /Disable | Out-Null
+	#schtasks /Change /TN "Microsoft\Windows\NetTrace\GatherNetworkInfo" /Disable | Out-Null
+	schtasks /Change /TN "Microsoft\Windows\Windows Error Reporting\QueueReporting" /Disable | Out-Null
+	schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Disable | Out-Null
+}
+
+# Enable Unneeded Scheduled Tasks
+Function EnableUnnededScheduledTasks {
+	Write-Host "Enabling Unneeded Scheduled Tasks..."
+	#schtasks /Change /TN "Microsoft\Windows\CloudExperienceHost\CreateObjectTask" /Enable | Out-Null
+	schtasks /Change /TN "Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector" /Enable | Out-Null
+	schtasks /Change /TN "Microsoft\Windows\DiskFootprint\Diagnostics" /Enable | Out-Null
+	#schtasks /Change /TN "Microsoft\Windows\Feedback\Siuf\DmClient" /Enable | Out-Null
+	#schtasks /Change /TN "Microsoft\Windows\NetTrace\GatherNetworkInfo" /Enable | Out-Null
+	schtasks /Change /TN "Microsoft\Windows\Windows Error Reporting\QueueReporting" /Enable | Out-Null
+	schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Enable | Out-Null
 }
 
 ##########

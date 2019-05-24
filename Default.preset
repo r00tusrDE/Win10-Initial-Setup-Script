@@ -194,6 +194,7 @@ UnpinStartMenuTiles
 UnpinTaskbarIcons
 
 ### Install Programs ###
+# ReturnInstallErrors
 # InstallChocolatey
 # Install7zip
 # InstallAtom

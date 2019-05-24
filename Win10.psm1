@@ -3101,52 +3101,90 @@ Function UnpinTaskbarIcons {
 #region Install Programs
 #Msiexec Command Line Parameters (used for .msi installtions): https://www.advancedinstaller.com/user-guide/msiexec.html
 ##########
-New-Item C:\Users\$env:username\Desktop\Programs\ -type directory 2>&1 | Out-Null
+
+# temporary folder for downloads of executables and installation logs
+$returnInstallErrorsEnabled = $false
+$tempOutputFolder = "C:\Users\$env:username\Desktop\Programs"
+New-Item $tempOutputFolder -type directory 2>&1 | Out-Null
+
+# Display installation results
+Function ReturnInstallErrors ($IsMSI) {
+	If($IsMSI) {
+    If (@(0,3010) -NotContains $return.exitcode) {
+      Write-Error "MSI ERROR: $($return.exitcode)"
+    }
+  } ElseIf ($IsMSI -eq $false) {
+    If (-Not $?) {
+      Write-Error "ERROR: $lastexitcode"
+  	}
+	} Else {
+		If(-Not $returnInstallErrorsEnabled) {
+			$returnInstallErrorsEnabled = $true
+		}
+	}
+}
 
 # Install Chocolatey Latest
 Function InstallChocolatey {
-	Write-Output "Installing Chocolatey ..."
+	$appName = "Chocolatey"
+	Write-Output "Installing $appName ..."
 	Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')) 2>&1 | Out-Null
 }
 
 # Install 7-Zip Specific Version
 Function Install7zip {
-	Write-Output "Downloading 7-Zip 19.00 ..."
+	$appName = "7-Zip 19.00"
+	Write-Output "Downloading $appName ..."
 	$url = "https://www.7-zip.org/a/7z1900-x64.msi"
-	$output = "C:\Users\$env:username\Desktop\Programs\7z1900-x64.msi"
-	Invoke-WebRequest $url -OutFile $Output
-	Write-Output "Installing 7-Zip 19.00 ..."
-	Start-Process -FilePath $output -ArgumentList '/qn /L* "$output\7-Zip_1900.log" /norestart ALLUSERS=2 INSTALLDIR="C:\Program Files\7-Zip"' 2>&1 | Out-Null
+	$output = "$tempOutputFolder\$($appName) - Setup.msi"
+	Invoke-WebRequest $url -OutFile $output
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList '/qn /L* "$tempOutputFolder\$appName.log" /norestart ALLUSERS=2 INSTALLDIR="C:\Program Files\7-Zip"' -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($true)
+	}
 }
 
 # Install Atom Latest
 Function InstallAtom {
-	Write-Output "Downloading Atom ..."
+	$appName = "Atom"
+	Write-Output "Downloading $appName ..."
 	$url = "https://atom.io/download/windows_x64"
-	$output = "C:\Users\$env:username\Desktop\Programs\AtomSetup.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing Atom ..."
-	Start-Process -FilePath $output -ArgumentList "--silent" 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList "--silent" -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install Battle.net Latest
 Function InstallBattleNet {
-	Write-Output "Downloading BattleNet ..."
+	$appName = "Battle.net"
+	Write-Output "Downloading $appName ..."
 	$url = "https://eu.battle.net/download/getInstaller?os=win&installer=Battle.net-Setup.exe"
-	$output = "C:\Users\$env:username\Desktop\Programs\Battle.Net-Setup.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing BattleNet ..."
-	Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install Blender Specific Version
 Function InstallBlender {
-	Write-Output "Downloading Blender 2.79b ..."
+	$appName = "Blender 2.79b"
+	Write-Output "Downloading $appName ..."
 	$url = "https://www.blender.org/download/Blender2.79/blender-2.79b-windows64.msi"
-	$output = "C:\Users\$env:username\Desktop\Programs\blender-2.79b-windows64.msi"
-	Invoke-WebRequest $url -OutFile $Output
-	Write-Output "Installing Blender 2.79b ..."
-	Start-Process -FilePath $output -ArgumentList '/qn /L* "$output\Blender_2.79b.log" /norestart ALLUSERS=2' 2>&1 | Out-Null
+	$output = "$tempOutputFolder\$($appName) - Setup.msi"
+	Invoke-WebRequest $url -OutFile $output
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList '/qn /L* "$tempOutputFolder\$appName.log" /norestart ALLUSERS=2' -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($true)
+	}
 }
 
 # Install Google Chrome
@@ -3161,186 +3199,272 @@ Function InstallCmder {
 
 # Install Firefox Latest
 Function InstallFirefox {
-	Write-Output "Downloading Firefox ..."
+	$appName = "Firefox Latest"
+	Write-Output "Downloading $appName ..."
 	$url = "https://download.mozilla.org/?product=firefox-latest-ssl&os=win64&lang=de"
-	$output = "C:\Users\$env:username\Desktop\Programs\FirefoxLatest.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing Firefox ..."
-	Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install Firefox ESR Latest
 Function InstallFirefoxESR {
-	Write-Output "Downloading Firefox ESR ..."
+	$appName = "Firefox ESR Latest"
+	Write-Output "Downloading $appName ..."
 	$url = "https://download.mozilla.org/?product=firefox-esr-latest-ssl&os=win64&lang=de"
-	$output = "C:\Users\$env:username\Desktop\Programs\FirefoxEsrLatest.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing Firefox ESR ..."
-	Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install Firefox Developer Edition Latest
 Function InstallFirefoxDevEdition {
-	Write-Output "Downloading Firefox Developer Edition ..."
+	$appName = "Firefox Developer Edition Latest"
+	Write-Output "Downloading $appName ..."
 	$url = "https://download.mozilla.org/?product=firefox-devedition-stub&os=win&lang=de"
-	$output = "C:\Users\$env:username\Desktop\Programs\FirefoxDevLatest.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing Firefox Developer Edition ..."
-	Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install GIMP Specific Version
 Function InstallGIMP {
-	Write-Output "Downloading GIMP 2.10.10 ..."
+	$appName = "GIMP 2.10.10"
+	Write-Output "Downloading $appName ..."
 	$url = "https://download.gimp.org/mirror/pub/gimp/v2.10/windows/gimp-2.10.10-setup.exe"
-	$output = "C:\Users\$env:username\Desktop\Programs\gimp-2.10.10-setup.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing GIMP 2.10.10 ..."
-	Start-Process -FilePath $output -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /LOG="$output\Inkscape_0.92.4.log" /NORESTART /SP-' 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /LOG="$tempOutputFolder\$appName.log" /NORESTART /SP-' -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
-# Install Inkscape Specific Version
-Function InstallInkscape {
-	Write-Output "Downloading Inkscape 0.92.4 ..."
-	$url = "https://inkscape.org/de/gallery/item/13321/inkscape-0.92.4-x64.msi"
-	$output = "C:\Users\$env:username\Desktop\Programs\inkscape-0.92.4-x64.msi"
-	Invoke-WebRequest $url -OutFile $Output
-	Write-Output "Installing Inkscape 0.92.4 ..."
-	Start-Process -FilePath $output -ArgumentList '/qn /L* "$output\Inkscape_0.92.4.log" /norestart ALLUSERS=2' 2>&1 | Out-Null
+# Install Git for Windows Latest
+Function InstallGitHubDesktop {
+	$appName = "Git for Windows 2.21.0"
+	Write-Output "Downloading $appName ..."
+	$url = "https://github.com/git-for-windows/git/releases/download/v2.21.0.windows.1/Git-2.21.0-64-bit.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
+	Invoke-WebRequest $url -OutFile $output
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /LOG="$tempOutputFolder\$appName.log" /NORESTART /SP-' -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($true)
+	}
 }
 
 # Install GitHub Desktop Latest
 Function InstallGitHubDesktop {
-	Write-Output "Downloading GitHub Desktop ..."
+	$appName = "GitHub Desktop Latest"
+	Write-Output "Downloading $appName ..."
 	$url = "https://central.github.com/deployments/desktop/desktop/latest/win32?format=msi"
-	$output = "C:\Users\$env:username\Desktop\Programs\GitHubDesktopLatest.msi"
-	Invoke-WebRequest $url -OutFile $Output
-	Write-Output "Installing GitHub Desktop ..."
-	Start-Process -FilePath $output -ArgumentList '/qn /L* "$output\GitHubDesktopLatest.log" /norestart ALLUSERS=2' 2>&1 | Out-Null
+	$output = "$tempOutputFolder\$($appName) - Setup.msi"
+	Invoke-WebRequest $url -OutFile $output
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList '/qn /L* "$tempOutputFolder\$appName.log" /norestart ALLUSERS=2' -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($true)
+	}
+}
+
+# Install Inkscape Specific Version
+Function InstallInkscape {
+	$appName = "Inkscape 0.92.4"
+	Write-Output "Downloading $appName ..."
+	$url = "https://inkscape.org/de/gallery/item/13321/inkscape-0.92.4-x64.msi"
+	$output = "$tempOutputFolder\$($appName) - Setup.msi"
+	Invoke-WebRequest $url -OutFile $output
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList '/qn /L* "$tempOutputFolder\$appName.log" /norestart ALLUSERS=2' -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($true)
+	}
 }
 
 # Install Joplin Specific Version
 # no non-GUI install possible!!
 Function InstallJoplin {
-	Write-Output "Downloading Joplin 1.0.152 ..."
+	$appName = "Joplin 1.0.152"
+	Write-Output "Downloading $appName ..."
 	$url = "https://github.com/laurent22/joplin/releases/download/v1.0.152/Joplin-Setup-1.0.152.exe"
-	$output = "C:\Users\$env:username\Desktop\Programs\Joplin-Setup-1.0.152.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing Joplin 1.0.152 ..."
-	Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install KeePass Specific Version
 Function InstallKeePass {
-	Write-Output "Downloading KeePass 2.42.1 ..."
+	$appName = "KeePass 2.42.1"
+	Write-Output "Downloading $appName ..."
 	$url = "https://netcologne.dl.sourceforge.net/project/keepass/KeePass%202.x/2.42.1/KeePass-2.42.1-Setup.exe"
-	$output = "C:\Users\$env:username\Desktop\Programs\KeePass-2.42.1-Setup.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing KeePass 2.42.1 ..."
-	Start-Process -FilePath $output -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /LOG="$output\KeePass_2.42.1.log" /NORESTART /SP-' 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /LOG="$tempOutputFolder\$appName.log" /NORESTART /SP-' -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install KeePassXC Specific Version
 Function InstallKeePassXC {
-	Write-Output "Downloading KeePassXC 2.4.1 ..."
+	$appName = "KeePassXC 2.4.1"
+	Write-Output "Downloading $appName ..."
 	$url = "https://github.com/keepassxreboot/keepassxc/releases/download/2.4.1/KeePassXC-2.4.1-Win64.msi"
-	$output = "C:\Users\$env:username\Desktop\Programs\KeePassXC-2.4.1.msi"
-	Invoke-WebRequest $url -OutFile $Output
-	Write-Output "Installing KeePassXC 2.4.1 ..."
-	Start-Process -FilePath $output -ArgumentList '/qn /L* "$output\KeePassXC_2.4.1.log" /norestart ALLUSERS=2' 2>&1 | Out-Null
+	$output = "$tempOutputFolder\$($appName) - Setup.msi"
+	Invoke-WebRequest $url -OutFile $output
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList '/qn /L* "$tempOutputFolder\$appName.log" /norestart ALLUSERS=2' -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($true)
+	}
 }
 
 # Install LibreOffice Still Specific Version
 Function InstallLibreOffice {
-	Write-Output "Downloading LibreOffice 6.2.4 ..."
+	$appName = "LibreOffice 6.2.4"
+	Write-Output "Downloading $appName ..."
 	$url = "https://de.libreoffice.org/donate/dl/win-x86_64/6.2.4/de/LibreOffice_6.2.4_Win_x64.msi"
-	$output = "C:\Users\$env:username\Desktop\Programs\LibreOffice_6.2.4.msi"
-	Invoke-WebRequest $url -OutFile $Output
-	Write-Output "Installing LibreOffice 6.2.4 ..."
-	Start-Process -FilePath $output -ArgumentList '/qn /L* "$output\LibreOffice_6.2.4.log" /norestart ALLUSERS=2' 2>&1 | Out-Null
+	$output = "$tempOutputFolder\$($appName) - Setup.msi"
+	Invoke-WebRequest $url -OutFile $output
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList '/qn /L* "$tempOutputFolder\$appName.log" /norestart ALLUSERS=2' -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($true)
+	}
 }
 
 # Install Media Player Classic (MPC-HC) Specific Version
 Function InstallMediaPlayerClassic {
-	Write-Output "Downloading MediaPlayerClassic 1.7.13 ..."
+	$appName = "MediaPlayerClassic 1.7.13"
+	Write-Output "Downloading $appName ..."
 	$url = "https://binaries.mpc-hc.org/MPC%20HomeCinema%20-%20x64/MPC-HC_v1.7.13_x64/MPC-HC.1.7.13.x64.exe"
-	$output = "C:\Users\$env:username\Desktop\Programs\MPC-HC.1.7.13.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing MediaPlayerClassic 1.7.13 ..."
-	Start-Process -FilePath $output -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /LOG="$output\MPC-HC_1.7.13.log" /NORESTART /SP-' 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /LOG="$tempOutputFolder\$appName.log" /NORESTART /SP-' -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install Nextcloud Client Specific Version
 # no non-GUI install possible!!
 Function InstallNextcloudDesktop {
-	Write-Output "Downloading Nextcloud 2.5.2 ..."
+	$appName = "Nextcloud 2.5.2"
+	Write-Output "Downloading $appName ..."
 	$url = "https://download.nextcloud.com/desktop/releases/Windows/Nextcloud-2.5.2-setup.exe"
-	$output = "C:\Users\$env:username\Desktop\Programs\Nextcloud-2.5.2-setup.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing Nextcloud 2.5.2 ..."
-	Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install Notepad++ x86 Specific Version
 Function InstallNotepadPlusPlus {
-	Write-Output "Downloading Notepad++ 7.7 ..."
+	$appName = "Notepad++ 7.7"
+	Write-Output "Downloading $appName ..."
 	$url = "https://notepad-plus-plus.org/repository/7.x/7.7/npp.7.7.Installer.exe"
-	$output = "C:\Users\$env:username\Desktop\Programs\npp.7.7.Installer.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing Notepad++ 7.7 ..."
-	Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install PuTTY Package
 Function InstallPutty {
-	Write-Output "Downloading PuTTY 0.71 ..."
+	$appName = "PuTTY 0.71"
+	Write-Output "Downloading $appName ..."
 	$url = "https://the.earth.li/~sgtatham/putty/latest/w64/putty-64bit-0.71-installer.msi"
-	$output = "C:\Users\$env:username\Desktop\Programs\putty-64bit-0.71-installer.msi"
-	Invoke-WebRequest $url -OutFile $Output
-	Write-Output "Installing PuTTY 0.71 ..."
-	Start-Process -FilePath $output -ArgumentList '/qn /L* "$output\PuTTY_0.71.log" /norestart ALLUSERS=2' 2>&1 | Out-Null
+	$output = "$tempOutputFolder\$($appName) - Setup.msi"
+	Invoke-WebRequest $url -OutFile $output
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList '/qn /L* "$tempOutputFolder\$appName.log" /norestart ALLUSERS=2' -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($true)
+	}
 }
 
 # Install Remote Server Administration Tools Version for min. Windows 10 18.03
 # TODO: Check if this is working
 Function InstallRSAT {
-	Write-Output "Downloading Remote Server Administration Tools 18.03 ..."
+	$appName = "Remote Server Administration Tools 18.03"
+	Write-Output "Downloading $appName ..."
 	$url = "https://download.microsoft.com/download/1/D/8/1D8B5022-5477-4B9A-8104-6A71FF9D98AB/WindowsTH-RSAT_WS_1803-x64.msu"
-	$output = "C:\Users\$env:username\Desktop\Programs\WindowsTH-RSAT_WS_1803-x64.msu"
-	Invoke-WebRequest $url -OutFile $Output
-	Write-Output "Installing Remote Server Administration Tools 18.03 ..."
-	#wusa.exe $output\934307\WindowsTH-RSAT_WS_1803-x64.msu /quiet
-	Start-Process -FilePath "wusa" -ArgumentList '$output\934307\WindowsTH-RSAT_WS_1803-x64.msu /quiet' 2>&1 | Out-Null
+	$output = "$tempOutputFolder\$($appName) - Setup.msu"
+	Invoke-WebRequest $url -OutFile $output
+	Write-Output "Installing $appName ..."
+	#wusa.exe $output /quiet
+	$return = Start-Process -FilePath "wusa" -ArgumentList '$output /quiet' -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install Steam Latest
 Function InstallSteam {
-	Write-Output "Downloading Steam ..."
+	$appName = "Steam"
+	Write-Output "Downloading $appName ..."
 	$url = "https://steamcdn-a.akamaihd.net/client/installer/SteamSetup.exe"
-	$output = "C:\Users\$env:username\Desktop\Programs\SteamSetup.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing Steam ..."
-	Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install TeamViewer Full Latest
 Function InstallTeamViewer {
-	Write-Output "Downloading TeamViewer ..."
+	$appName = "TeamViewer Full Latest"
+	Write-Output "Downloading $appName ..."
 	$url = "https://download.teamviewer.com/full"
-	$output = "C:\Users\$env:username\Desktop\Programs\TeamViewer_Full.exe"
+	$output = "$tempOutputFolder\$appName.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing TeamViewer ..."
-	Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install Thunderbird Specific Version
 Function InstallThunderbird {
-	Write-Output "Downloading Thunderbird 60.7.0 ..."
+	$appName = "Thunderbird 60.7.0"
+	Write-Output "Downloading $appName ..."
 	$url = "https://download-installer.cdn.mozilla.net/pub/thunderbird/releases/60.7.0/win32/de/Thunderbird%20Setup%2060.7.0.exe"
-	$output = "C:\Users\$env:username\Desktop\Programs\Thunderbird_60.7.0.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing Thunderbird 60.7.0 ..."
-	Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install Tor Browser
@@ -3350,22 +3474,30 @@ Function InstallTorBrowser {
 
 # Install Uplay Latest
 Function InstallUplay {
-	Write-Output "Downloading Uplay ..."
+	$appName = "Uplay"
+	Write-Output "Downloading $appName ..."
 	$url = "https://ubistatic3-a.akamaihd.net/orbit/launcher_installer/UplayInstaller.exe"
-	$output = "C:\Users\$env:username\Desktop\Programs\UplayInstaller.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing Uplay ..."
-	Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install VirtualBox Specific Version
 Function InstallVirtualBox {
-	Write-Output "Downloading VirtualBox 6.0.8 ..."
+	$appName = "VirtualBox 6.0.8"
+	Write-Output "Downloading $appName ..."
 	$url = "https://download.virtualbox.org/virtualbox/6.0.8/VirtualBox-6.0.8-130520-Win.exe"
-	$output = "C:\Users\$env:username\Desktop\Programs\VirtualBox-6.0.8-130520.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing VirtualBox ..."
-	Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList "/S /silent /s -ms" -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install Visual Studio Community 2019
@@ -3375,23 +3507,31 @@ Function InstallVisualStudio2019 {
 
 # Install Visual Studio Code Latest
 Function InstallVisualStudioCode {
-	Write-Output "Downloading Visual Studio Code ..."
+	$appName = "Visual Studio Code"
+	Write-Output "Downloading $appName ..."
 	$url = "https://aka.ms/win32-x64-user-stable"
-	$output = "C:\Users\$env:username\Desktop\Programs\VSCodeUserSetup.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing Visual Studio Code ..."
+	Write-Output "Installing $appName ..."
 	# /MERGETASKS=!runcode to prevent VSCode from opening after installation - For more informations see http://www.jrsoftware.org/ishelp/index.php?topic=setupcmdline&anchor=MERGETASKS
-	Start-Process -FilePath $output -ArgumentList '/MERGETASKS=!runcode /VERYSILENT /SUPPRESSMSGBOXES /LOG="$output\VisualStudioCode.log" /NORESTART /SP-' 2>&1 | Out-Null
+	$return = Start-Process -FilePath $output -ArgumentList '/MERGETASKS=!runcode /VERYSILENT /SUPPRESSMSGBOXES /LOG="$tempOutputFolder\$appName.log" /NORESTART /SP-' -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install WinSCP Specific Version
 Function InstallWinSCP {
-	Write-Output "Downloading WinSCP 5.15.1 ..."
+	$appName = "WinSCP 5.15.1"
+	Write-Output "Downloading $appName ..."
 	$url = "https://winscp.net/download/WinSCP-5.15.1-Setup.exe"
-	$output = "C:\Users\$env:username\Desktop\Programs\WinSCP-5.15.1-Setup.exe"
+	$output = "$tempOutputFolder\$($appName) - Setup.exe"
 	Invoke-WebRequest $url -OutFile $output
-	Write-Output "Installing WinSCP 5.15.1 ..."
-	Start-Process -FilePath $output -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /LOG="$output\WinSCP.log" /NORESTART /SP-' 2>&1 | Out-Null
+	Write-Output "Installing $appName ..."
+	$return = Start-Process -FilePath $output -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /LOG="$tempOutputFolder\$appName.log" /NORESTART /SP-' -NoNewWindow -Wait 2>&1 | Out-Null
+	If ($returnInstallErrorsEnabled) {
+		ReturnInstallErrors($false)
+	}
 }
 
 # Install Windows System Control Center
@@ -3401,7 +3541,7 @@ Function InstallWSCC {
 
 # Delete temporary files and every downloaded installer
 Function DeleteFiles {
-	$tempfolders = @("C:\Windows\Temp\*", "C:\Windows\Prefetch\*", "C:\Users\*\Appdata\Local\Temp\*", "C:\Users\$env:username\Desktop\Programs\*.exe", "C:\Users\$env:username\Desktop\Programs\*.msi")
+	$tempfolders = @("C:\Windows\Temp\*", "C:\Windows\Prefetch\*", "C:\Users\*\Appdata\Local\Temp\*", "$tempOutputFolder\*.exe", "$tempOutputFolder\*.msi")
 	Remove-Item $tempfolders -force -recurse 2>&1 | Out-Null
 	function Delete() {
 		$Invocation = (Get-Variable MyInvocation -Scope 1).Value
@@ -3409,6 +3549,7 @@ Function DeleteFiles {
 		Remove-Item $Path
 	}
 }
+
 
 ##########
 #endregion Install Programs
